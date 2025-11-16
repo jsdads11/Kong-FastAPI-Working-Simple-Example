@@ -1,9 +1,9 @@
-## FastAPI AWS Lambda Python
+# FastAPI AWS Lambda Python
 
-# 1. Create Local Runnable version of Docker FastAPI AWS Lambda code.
-### Docker simple AWS Lambda Python
+## 1. Create Local Runnable version of Docker FastAPI AWS Lambda code.
+### Docker AWS Lambda Python
 
-/Users/tonyodonnell/Kong-Lambda-Docker-FastAPI
+cd /Users/tonyodonnell/Kong-Lambda-Docker-FastAPI
 
 Local run of container
 ````
@@ -12,7 +12,6 @@ docker buildx build --platform linux/amd64 --provenance=false -t docker-image:fa
 ````
 docker run --platform linux/amd64 -p 9001:8080 docker-image:fastapi
 ````
-
 port mapping  HOST_PORT:CONTAINER_PORT <9001:8080>
 
 docker run --platform linux/amd64 -d -p 9001:8080 docker-image:test lambda_function.handler
@@ -37,54 +36,69 @@ The Lambda function is responding correctly. You can now test it with:
 
 # 2. Now deploy Docker FastAPI AWS Lambda code to AWS as a Lambda Python
 
-````
-curl "http://localhost:9001/2015-03-31/functions/function/invocations" -d '{}'
+### Set up AWS Lambda Environment and Deploy via ECR
 
-curl "http://localhost:9001/2015-03-31/functions/function/invocations" -d '{"payload":"hello world!"}'
+Set AWS Creds and Configs
 ````
-
-tonyodonnell@Tonys-MacBook-Pro-2 Kong-Lambda-Docker % curl "http://localhost:9001/2015-03-31/functions/function/invocations" -d '{}'
-
+aws configure
 ````
-"Hello from AWS Lambda using Python3.12.12 (main, Nov  3 2025, 10:02:13) [GCC 11.5.0 20240719 (Red Hat 11.5.0-5)]!"
-````
----
+// run get-login-passward command below as a single command
 ````
 aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 129269632956.dkr.ecr.eu-west-1.amazonaws.com
 ````
+// repository name must be lower-caseq
 ````
-aws ecr create-repository --repository-name hello-world --region eu-west-1 --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE
+aws ecr create-repository --repository-name kong-lambda-docker-fastapi --region eu-west-1 --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE
 ````
-
+// ws ecr describe-repositories --repository-names kong-lambda-docker-fastapi
 ````
 {
-    "repository": {
-        "repositoryArn": "arn:aws:ecr:eu-west-1:129269632956:repository/hello-world",
-        "registryId": "129269632956",
-        "repositoryName": "hello-world",
-        "repositoryUri": "129269632956.dkr.ecr.eu-west-1.amazonaws.com/hello-world",
-        "createdAt": "2025-11-15T18:57:13.759000+00:00",
-        "imageTagMutability": "MUTABLE",
-        "imageScanningConfiguration": {
-            "scanOnPush": true
-        },
-        "encryptionConfiguration": {
-            "encryptionType": "AES256"
+    "repositories": [
+        {
+            "repositoryArn": "arn:aws:ecr:eu-west-1:129269632956:repository/kong-lambda-docker-fastapi",
+            "registryId": "129269632956",
+            "repositoryName": "kong-lambda-docker-fastapi",
+            "repositoryUri": "129269632956.dkr.ecr.eu-west-1.amazonaws.com/kong-lambda-docker-fastapi",
+            "createdAt": "2025-11-16T10:52:54.194000+00:00",
+            "imageTagMutability": "MUTABLE",
+            "imageScanningConfiguration": {
+                "scanOnPush": true
+            },
+            "encryptionConfiguration": {
+                "encryptionType": "AES256"
+            }
         }
-    }
+    ]
 }
 ````
 
-"repositoryUri": "905418199363.dkr.ecr.eu-west-1.amazonaws.com/hello-world"
+// "repositoryUri": "905418199363.dkr.ecr.eu-west-1.amazonaws.com/ong-lambda-docker-fastapi"
 
+// tag and push image to AWS ECR
 ````
-docker tag docker-image:test 129269632956.dkr.ecr.eu-west-1.amazonaws.com/hello-world:latest
+docker tag docker-image:test 129269632956.dkr.ecr.eu-west-1.amazonaws.com/kong-lambda-docker-fastapi:latest
 ````
 ````
-docker push 129269632956.dkr.ecr.eu-west-1.amazonaws.com/hello-world:latest
+docker push 129269632956.dkr.ecr.eu-west-1.amazonaws.com/kong-lambda-docker-fastapi:latest
 ````
 
-role
+<span style="color: #179803ff; font-family: Babas; font-size: 1em;">
+The push refers to repository [129269632956.dkr.ecr.eu-west-1.amazonaws.com/kong-lambda-docker-fastapi] <br>
+61f7e5d657a2: Pushed 
+cf3f8ccf59bb: Pushing [==================================================>]  2.963MB/2.963MB  <br>
+4f4fb700ef54: Pushed  <br>
+6c44d335f0cb: Pushing [==================================>                ]  25.17MB/36.89MB  <br>
+a4ec5d732ea0: Pushing [=========================>                         ]  5.243MB/10.14MB  <br>
+2831a7d11c1a: Pushed  <br>
+e1f9c820f9c2: Pushing [===>                                               ]  10.49MB/146.1MB  <br>
+fff8749513cc: Pushed  <br>
+74de38b4a9b6: Pushing [==================================================>]  1.696MB/1.696MB  <br>
+0123fd21151e: Pushed  <br>
+ee7f93ab0035: Pushed  <br>
+</span>
+<br>
+
+// create role (may already exist)
 ````
 aws iam create-role --role-name lambda-ex --assume-role-policy-document '{
     "Version": "2012-10-17",
@@ -99,7 +113,7 @@ aws iam create-role --role-name lambda-ex --assume-role-policy-document '{
     ]
 }'
 ````
-output
+// output (aws iam get-role --role-name lambda-ex)
 ````
 {
     "Role": {
@@ -123,16 +137,12 @@ output
     }
 }
 ````
-
+// creat lambda function kong-lambda-docker-fastapi
 ````
-aws lambda create-function --function-name hello-world --package-type Image --code ImageUri=129269632956.dkr.ecr.eu-west-1.amazonaws.com/hello-world:latest --role arn:aws:iam::129269632956:role/lambda-ex
+aws lambda create-function --function-name kong-lambda-docker-fastapi --package-type Image --code ImageUri=129269632956.dkr.ecr.eu-west-1.amazonaws.com/kong-lambda-docker-fastapi:latest --role arn:aws:iam::129269632956:role/lambda-ex --region eu-west-1
 ````
----
-
-<br>
-
 ````
-aws lambda invoke --function-name hello-world response.json
+aws lambda invoke --function-name kong-lambda-docker-fastapi response.json
 ````
 output. ( >> response.json file)
 
@@ -143,3 +153,23 @@ output. ( >> response.json file)
 }
 (END)
 ````
+
+curl "http://localhost:9001/2015-03-31/functions/function/invocations" -d '{}'
+
+<span style="color: #179803ff; font-family: Babas; font-size: 1.1em;">
+
+"Hello from AWS Lambda using Python3.12.12 (main, Nov  3 2025, 10:02:13) [GCC 11.5.0 20240719 (Red Hat 11.5.0-5)]!"%
+
+<span>
+
+---
+
+# Set up Kong to call the API
+
+Goto Kong Konnect
+Gateway Manmager
+ej-eiapmm-dev Control Plane
+- Gateway Services
+  - kong-lambda-docker-fastapi-svc
+- Routes
+  - kong-lambda-docker-fastapi-rte # kong-lambda-docker-fastapi
