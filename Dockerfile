@@ -1,4 +1,3 @@
-# FROM public.ecr.aws/docker/library/python:3.8.12-slim-buster
 FROM public.ecr.aws/lambda/python:3.12
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=8000
