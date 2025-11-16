@@ -173,3 +173,8 @@ ej-eiapmm-dev Control Plane
   - kong-lambda-docker-fastapi-svc
 - Routes
   - kong-lambda-docker-fastapi-rte # kong-lambda-docker-fastapi
+
+
+![alt text](https://github.com/jsdads11/kong-lambda-docker-fastapi.git/images/kong-svc.jpg?raw=true)
+![alt text](https://github.com/jsdads11/kong-lambda-docker-fastapi.git/images/kong-rtye.jpg?raw=true)
+x
